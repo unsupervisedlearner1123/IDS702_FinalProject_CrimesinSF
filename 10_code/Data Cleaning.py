@@ -191,6 +191,7 @@ pd.crosstab(df["Resolution"], df["Resolution_resp"])
 
 # %%
 df.head()
+df.to_csv("sfpd_police_incidents_clean.csv", index=False)
 
 
 # # Calculating average of hour at which incidents occur
