@@ -1,0 +1,46 @@
+---
+title: "Analysis of Crime Clearance Rates in San Francisco"
+author: "Deekshita Saikia"
+date: "12/12/2021"
+output: pdf_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = FALSE)
+```
+
+## Summary
+This analysis investigates factors that influence the clearance rates of crimes across the various Police Districts of San Francisco. The data analyzed contains reports of crime incidents filed daily with the San Francisco Police Department (SFPD) since January 1, 2018. The final valid model used is a hierarchical logistic regression model that models crime clearance rates as the response, and Police Districts as the random intercept. The results show that ---.
+
+## Introduction
+San Francisco has long been an epicenter of crime incidents, with the most recent spurt of burglaries and homicides observed during the pandemic. The locals face a 1-in-16 chance each year of being a victim to a property or a violent crime, which makes the city more dangerous than around 98% of the cities in the US. While the overall crime rates have gone down since the peaks of the 1980s, the crime clearance rates have shown no improvement in recent years. The SFPD's clearance rates dashboard provides data on the number of crimes cleared, by type of crimes and police precincts, which shows a consistent decrease in the clearance rates across all types of crime categories since 2018. 
+
+In order to implement law and order effectively, crime rates, as well as crime clearance rates must be analyzed and steps taken to lower the number of unsolved crimes as much as possible. In this analysis, some factors that possibly influence the crime clearance rates are studied. In particular, we look at factors like season of the year, public holidays, crime categories, time of day and week, and how they affect the crime clearance rates, for the eleven police precincts of San Francisco.
+
+## Data 
+The dataset used for this analysis has been sourced from SFPD's Incident Report Database. The dataset compiles data from the department's Crime Data Warehouse (CDW) to provide information on incident reports filed daily by the SFPD with CDW, or filed by the public with the SFPD.
+
+The incident reports dataset contains 
+
+
+## Model
+
+## Conclusion
+
+This is an R Markdown document. Markdown is a simple formatting syntax for authoring HTML, PDF, and MS Word documents. For more details on using R Markdown see <http://rmarkdown.rstudio.com>.
+
+When you click the **Knit** button a document will be generated that includes both content as well as the output of any embedded R code chunks within the document. You can embed an R code chunk like this:
+
+```{r cars}
+summary(cars)
+```
+
+## Including Plots
+
+You can also embed plots, for example:
+
+```{r pressure, echo=FALSE}
+plot(pressure)
+```
+
+Note that the `echo = FALSE` parameter was added to the code chunk to prevent printing of the R code that generated the plot.
