@@ -20,7 +20,11 @@ In order to implement law and order effectively, crime rates, as well as crime c
 ## Data 
 The dataset used for this analysis has been sourced from SFPD's Incident Report Database. The dataset compiles data from the department's Crime Data Warehouse (CDW) to provide information on incident reports filed daily by the SFPD with CDW, or filed by the public with the SFPD.
 
-The incident reports dataset contains 
+The incident reports data contains records of incidents filed daily since January 1, 2018 to November 11, 2021. It is the closest the department provides to raw counts of reported crimes across the city. All reports are approved by a supervising Sergeant or Lieutenant. Some records may be removed to comply with court orders to to keep certain records private during internal investigations.
+
+The dataset includes attributes like  date and times of incidents, the street intersections where each incident occurred, whether multiple crimes occurred in the same incident, and the jurisdiction where the incident took place. We leverage these attributes for our analysis, to see which factors influence crime clearances, by the different police precincts of the city.
+
+
 
 
 ## Model
