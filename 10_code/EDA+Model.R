@@ -209,8 +209,8 @@ ggplot(merged_pd,aes(x=TimeOfDay, y=resolution_rate, fill=TimeOfDay)) +
   scale_fill_viridis(discrete = TRUE) +
   labs(title="Resolution rates in Police Districts by Time of Day",
        x="Time of Day",y="Resolution Rates") + 
-  # theme_classic() + 
-  dark_theme_gray() +
+  theme_classic() +
+  # dark_theme_gray() +
   theme(legend.position="none") +
   #scale_x_discrete(labels=c("0" = "No","1" = "Yes")) +
   facet_wrap( ~ PoliceDistrict, ncol=5) +
@@ -270,7 +270,7 @@ model1_minus_hol_seas <- glmer(cbind(Resolution_resp, countIncidents-Resolution_
                           #   optimizer="bobyqa",optCtrl=list(maxfun=2e5))
 )
 
-# anova(model1_minus_hol,model1_minus_hol_seas,test="Chisq")
+anova(model1_minus_hol_seas,model1_minus_hol,test="Chisq")
 summary(model1_minus_hol_seas)
 tab_model(model1_minus_hol_seas)
 dotplot(ranef(model1_minus_hol_seas, condVar=TRUE))
@@ -282,8 +282,7 @@ dotplot(ranef(model1_minus_hol_seas, condVar=TRUE))
 
 # Model 2 - including random slope and random intercept
 start_time <- Sys.time()
-model2 <- glmer(cbind(Resolution_resp, countIncidents-Resolution_resp) ~ 
-                  Season + Month + isWeekend +
+model2 <- glmer(cbind(Resolution_resp, countIncidents-Resolution_resp) ~ Month + isWeekend +
                   TimeOfDay + IncCategory +(TimeOfDay | PoliceDistrict),                         
                 family=binomial(link="logit"), data=merged_pd
                 # ,control=glmerControl(
@@ -297,14 +296,13 @@ tab_model(model2)
 dotplot(ranef(model2, condVar=TRUE))
 
 # Model 3 - Trying Poisson with random intercept
-# model3 <- glmer(cbind(Resolution_resp, countIncidents-Resolution_resp) ~ 
-#                   Season + Month + isWeekend +
-#                   TimeOfDay + (1 | PoliceDistrict),                         
-#                 family=poisson(link="log"), data=merged_pd
-#                 # ,control=glmerControl(
-#                 #   optimizer="bobyqa",optCtrl=list(maxfun=2e5))
-# )
-# summary(model3)
-# tab_model(model3)
-# dotplot(ranef(model3, condVar=TRUE))
+model3 <- glmer(cbind(Resolution_resp, countIncidents-Resolution_resp) ~ Month + isWeekend +
+                  TimeOfDay + IncCategory + (1 | PoliceDistrict),
+                family=poisson(link="log"), data=merged_pd
+                # ,control=glmerControl(
+                #   optimizer="bobyqa",optCtrl=list(maxfun=2e5))
+)
+summary(model3)
+tab_model(model3)
+dotplot(ranef(model3, condVar=TRUE))
 

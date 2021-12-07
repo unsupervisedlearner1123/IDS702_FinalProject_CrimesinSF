@@ -21,6 +21,7 @@ InteractiveShell.ast_node_interactivity = "all"
 # %%
 import pandas as pd
 import numpy as np
+import os
 import matplotlib.pyplot as plt
 from scipy import stats
 from sklearn.model_selection import train_test_split
@@ -45,7 +46,7 @@ pd.set_option("float_format", "{:.2f}".format)
 # %%
 # start_time=time.time()
 df = pd.read_csv(
-    "C:\\Users\\deeks\\Documents\\MIDS\\IDS 702_Modeling and representation of data\\Final Project\\\Datasets\\Police_Department_Incident_Reports__2018_to_Present(2).csv"
+    "C:\\Users\\deeks\\Documents\\MIDS\\IDS_702_Modeling_and_representation_of_data\\Final Project\\\Datasets\\Police_Department_Incident_Reports__2018_to_Present(2).csv"
 )
 # print('Duration: {:.2f} seconds'.format(time.time()-start_time))
 # df.head()
@@ -62,7 +63,10 @@ df.info()
 (df.groupby("Incident Number")["Incident Category"].count() > 1).sum()
 
 # %%
-# Keeping one incident category per incident
+# Keeping one incident category per incident, latest resolution by incident
+df.sort_values(
+    by=["Incident Number", "Incident Datetime"], ascending=[True, False], inplace=True
+)
 df.drop_duplicates(subset="Incident Number", keep="first", inplace=True)
 df.shape
 
@@ -79,7 +83,7 @@ drop_col_list = [
     "Filed Online",
     "Incident Code",
     "Incident Category",
-    "Incident Subcategory",
+    # "Incident Subcategory",
     "Incident Description",
     # "Resolution",
     "Intersection",
@@ -190,7 +194,86 @@ df.loc[
 pd.crosstab(df["Resolution"], df["Resolution_resp"])
 
 # %%
+cat_map = {
+    "Larceny - From Vehicle": "Property Crime",
+    "Other": "Other",
+    "Larceny Theft - Other": "Property Crime",
+    "Vandalism": "Property Crime",
+    "Motor Vehicle Theft": "Property Crime",
+    "Simple Assault": "Violent Crime",
+    "Non-Criminal": "Other",
+    "Lost Property": "Property Crime",
+    "Fraud": "Other",
+    "Suspicious Occ": "Other",
+    "Burglary - Other": "Property Crime",
+    "Burglary - Residential": "Property Crime",
+    "Larceny Theft - From Building": "Property Crime",
+    "Larceny Theft - Shoplifting": "Property Crime",
+    "Aggravated Assault": "Violent Crime",
+    "Recovered Vehicle": "Other",
+    "Theft From Vehicle": "Property Crime",
+    "Drug Violation": "Other",
+    "Warrant": "Other",
+    "Miscellaneous Investigation": "Other",
+    "Robbery - Other": "Violent Crime",
+    "Missing Person": "Other",
+    "Missing Adult": "Other",
+    "Intimidation": "Other",
+    "Trespass": "Other",
+    "Burglary - Hot Prowl": "Property Crime",
+    "Weapons Offense": "Violent Crime",
+    "Traffic Violation Arrest": "Other",
+    "Burglary - Commercial": "Property Crime",
+    "Robbery - Commercial": "Violent Crime",
+    "Robbery - Street": "Violent Crime",
+    "Larceny Theft - Bicycle": "Property Crime",
+    "Larceny Theft - Pickpocket": "Property Crime",
+    "Other Offenses": "Other",
+    "Forgery And Counterfeiting": "Other",
+    "Larceny - Auto Parts": "Property Crime",
+    "Arson": "Arson",
+    "Disorderly Conduct": "Other",
+    "Stolen Property": "Property Crime",
+    "Fire Report": "Arson",
+    "Loitering": "Other",
+    "Case Closure": "Other",
+    "Prostitution": "Other",
+    "Embezzlement": "Other",
+    "Drunkenness": "Other",
+    "Sex Offense": "Other",
+    "Courtesy Report": "Other",
+    "Traffic Collision": "Other",
+    "Traffic Collision - Hit & Run": "Other",
+    "Motor Vehicle Theft (Attempted)": "Property Crime",
+    "Vehicle Impounded": "Other",
+    "Robbery - Carjacking": "Violent Crime",
+    "Suicide": "Other",
+    "Liquor Law Violation": "Other",
+    "Extortion-Blackmail": "Other",
+    "Stalking": "Other",
+    "Vehicle Misplaced": "Other",
+    "Kidnapping": "Other",
+    "Larceny Theft - Purse Snatch": "Property Crime",
+    "Suspicious Package": "Other",
+    "Human Trafficking, Commercial Sex Acts": "Other",
+    "Rape": "Violent Crime",
+    "Bad Checks": "Other",
+    "Rape - Attempted": "Violent Crime",
+    "Manslaughter": "Violent Crime",
+    "Gambling": "Other",
+    "Robbery - Residential": "Property Crime",
+    "Homicide": "Violent Crime",
+    "Arrest": "Other",
+    "Bribery": "Other",
+}
+df["IncCategory"] = df["Incident Subcategory"].map(cat_map)
+df.drop(columns=["Incident Subcategory"], inplace=True)
+
+# %%
 df.head()
+os.chdir(
+    "C:\\Users\\deeks\\Documents\\MIDS\\IDS_702_Modeling_and_representation_of_data\\Final Project\\\Gitdata\\IDS702_FinalProject_CrimesinSF\\20_intermediate_files\\"
+)
 df.to_csv("sfpd_police_incidents_clean.csv", index=False)
 
 
