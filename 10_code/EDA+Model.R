@@ -163,7 +163,7 @@ ggplot(merged_pd,aes(x=Season, y=resolution_rate, fill=Season)) +
   geom_boxplot() + #coord_flip() +
   # scale_fill_brewer(palette="Reds") +
   scale_fill_viridis(discrete = TRUE) +
-  labs(title="Resolution rates in Police Districts by Season",
+  labs(title="Clearance rates in Police Districts by Season",
        x="Season",y="Resolution Rates") + 
   theme_classic() + theme(legend.position="none") +
   #scale_x_discrete(labels=c("0" = "No","1" = "Yes")) +
@@ -174,7 +174,7 @@ ggplot(merged_pd,aes(x=Month, y=resolution_rate, fill=Month)) +
   geom_boxplot() + #coord_flip() +
   # scale_fill_brewer(palette="Reds") +
   scale_fill_viridis(discrete = TRUE) +
-  labs(title="Resolution rates in Police Districts by Month",
+  labs(title="Clearance rates in Police Districts by Month",
        x="Month",y="Resolution Rates") + 
   theme_classic() + theme(legend.position="none") +
   #scale_x_discrete(labels=c("0" = "No","1" = "Yes")) +
@@ -291,6 +291,8 @@ model2 <- glmer(cbind(Resolution_resp, countIncidents-Resolution_resp) ~ Month +
 end_time <- Sys.time()
 print(paste("The model training time:" , end_time - start_time))
 
+anova(model1_minus_hol_seas,model2,test="Chisq")
+
 summary(model2)
 tab_model(model2)
 dotplot(ranef(model2, condVar=TRUE))
@@ -298,9 +300,9 @@ dotplot(ranef(model2, condVar=TRUE))
 # Model 3 - Trying Poisson with random intercept
 model3 <- glmer(cbind(Resolution_resp, countIncidents-Resolution_resp) ~ Month + isWeekend +
                   TimeOfDay + IncCategory + (1 | PoliceDistrict),
-                family=poisson(link="log"), data=merged_pd
-                # ,control=glmerControl(
-                #   optimizer="bobyqa",optCtrl=list(maxfun=2e5))
+                family=poisson(link="log"), data=merged_pd,
+                control=glmerControl(optimizer="bobyqa", 
+                optCtrl = list(maxfun = 100000))
 )
 summary(model3)
 tab_model(model3)
