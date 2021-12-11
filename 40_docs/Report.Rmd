@@ -1,16 +1,19 @@
 ---
 title: "Analysis of Crime Clearance Rates in San Francisco"
+subtitle: 'Final Project Submission for IDS 702, Fall 2021'
 author: "Deekshita Saikia"
 date: "12/12/2021"
-output: pdf_document
+output:
+  pdf_document:
+    fig_caption: yes
 ---
 
 ```{r setup, include=FALSE}
-knitr::opts_chunk$set(echo = FALSE)
+knitr::opts_chunk$set(echo = FALSE, out.width="49%",out.height="49%",fig.show='hold',fig.align = "center")
 ```
 
 ## Summary
-This analysis investigates factors that influence the clearance rates of crimes across the various Police Districts of San Francisco. The data analyzed contains reports of crime incidents filed daily with the San Francisco Police Department (SFPD) since January 1, 2018. The final valid model used is a hierarchical logistic regression model that models crime clearance rates as the response, and Police Districts as the random intercept. The results show that ---.
+This analysis investigates factors that influence the clearance rates of crimes across the various Police Districts of San Francisco. The data analyzed contains reports of crime incidents filed daily with the San Francisco Police Department (SFPD) since January 1, 2018. The final valid model used is a hierarchical logistic regression model that models crime clearance rates as the response, and Police Districts as the random intercept. The results show that the time of day, if the crime occurred on a weekday or weekend, and the category of crime, have an impact on the crime clearance rates across the police districts. The dataset is updated daily, so the clearance rates used in this analysis might not be exactly accurate. 
 
 ## Introduction
 San Francisco has long been an epicenter of crime incidents, with the most recent spurt of burglaries and homicides observed during the pandemic. The locals face a 1-in-16 chance each year of being a victim to a property or a violent crime, which makes the city more dangerous than around 98% of the cities in the US. While the overall crime rates have gone down since the peaks of the 1980s, the crime clearance rates have shown no improvement in recent years. The SFPD's clearance rates dashboard provides data on the number of crimes cleared, by type of crimes and police precincts, which shows a consistent decrease in the clearance rates across all types of crime categories since 2018. 
@@ -20,31 +23,355 @@ In order to implement law and order effectively, crime rates, as well as crime c
 ## Data 
 The dataset used for this analysis has been sourced from SFPD's Incident Report Database. The dataset compiles data from the department's Crime Data Warehouse (CDW) to provide information on incident reports filed daily by the SFPD with CDW, or filed by the public with the SFPD.
 
-The incident reports data contains records of incidents filed daily since January 1, 2018 to November 11, 2021. It is the closest the department provides to raw counts of reported crimes across the city. All reports are approved by a supervising Sergeant or Lieutenant. Some records may be removed to comply with court orders to to keep certain records private during internal investigations.
+The incident reports data contains records of incidents filed daily since January 1, 2018 to November 11, 2021. It is the closest the department provides to raw counts of reported crimes across the city. All reports are approved by a supervising Sergeant or Lieutenant.
 
-The dataset includes attributes like  date and times of incidents, the street intersections where each incident occurred, whether multiple crimes occurred in the same incident, and the jurisdiction where the incident took place. We leverage these attributes for our analysis, to see which factors influence crime clearances, by the different police precincts of the city.
+The dataset includes attributes like  date and times of incidents, the street intersections where each incident occurred, whether multiple crimes occurred in the same incident, and the jurisdiction where the incident took place. We leverage these attributes for our analysis, to see which factors influence crime clearances, by the different police precincts of the city. In addition, public holidays ave also been merged into this dataset to examine if holidays had an effect on crime clearances.
 
+A clearance rate describes the percentage of clearances reported to the number of crimes reported. The variable $Resolution$ is a categorical variable with 4 classes: *Open or Active*, *Cite or Arrest Adult*, *Exceptional adult*, and *Unfounded*. We define a binary variable that signifies if the crime was resolved, classifying *Cite or Arrest Adult* and *Exceptional adult* as resolved, and the remaining classes as unresolved.
 
+Before fitting a model, a series of pre-processing steps are carried out in the data. The redundant and irrelevant variables for our analysis are dropped. Some incident reports have multiple incident codes recorded against a single incident number. In these cases, a single incident code is retained against an individual incident for the purpose of this analysis. It is also worth noting that once a supervising officer provides approval for an incident report, no further changes can be made to it. If changes or additional information is required or discovered during an investigation, a supplemental report is filed to capture updates. Hence, for this analysis, the latest report corresponding to an incident is kept.
 
+The *Incident Subcategory* column has 71 unique categories of incidents. Since this is very granular to model on, the categories corresponding this column are collapsed into four classes: *Property Crime*, *Violent Crime*, *Arson* and *Other*. This column also has a very minute proportion of missing values (~0.07%), which are dropped from the dataset. In addition, incidents that took place outside the jurisdiction of San Francisco have been dropped. 
+
+A few features are engineered out of existing features in the dataset. A $Season$ variable is created out of the month of occurrence of the incident. The time of occurrence of incident is used to create a categorical variable $TimeofDay$, which consists of 6 classes, viz., *Late Night*, *Early Morning*, *Morning*, *Noon*, *Evening* and *Night*. An indicator for weekend is also created, and public holidays have been merged into this dataset from an external source. The dataset is then rolled up, so our unit of observation is *PoliceDistrict*, *IncCategory*, *Season*, *Month*, *isWeekend*, *Holiday* and *TimeOfDay*, and clearance rates are calculated at this level.
+
+Exploratory analysis is carried out to examine how the distribution of clearance rates differ across each of the police districts. This can be seen in the graphs below.
+
+```{r edaplot,echo=FALSE, message=FALSE, warning=FALSE, results='asis', out.width="49%", fig.cap = "Left: Clearance rates across Police Districts; Right: Clearance rates by category of incident"}
+library(dplyr)
+library(ggplot2)
+library(ggeasy)
+library(ggdark)
+library(viridis)
+library(lme4)
+library(rstan)
+# library(brms)
+library(sjPlot) 
+library(lattice) 
+library(caret)
+library(stargazer)
+
+df_raw <- read.csv("C:\\Users\\deeks\\Documents\\MIDS\\IDS_702_Modeling_and_representation_of_data\\Final Project\\Gitdata\\IDS702_FinalProject_CrimesinSF\\20_intermediate_files\\sfpd_police_incidents_clean.csv", 
+                   header=TRUE, sep=",", stringsAsFactors = FALSE, na.strings=c("NA","NaN", " ",""))
+df_raw <- df_raw[!is.na(df_raw$IncCategory),]
+# dropped 267 nulls
+
+drop_cols <- c("DayOfMonth","WeekOfYear","End_Start_Month",
+               "BusinessHour", "Year")
+df_raw = df_raw[,!(names(df_raw) %in% drop_cols)]
+
+# Checking nulls
+# sapply(df_raw, function(x) sum(is.na(x)))
+
+# Converting to factors
+factor_cols <- c("Resolution", "PoliceDistrict",
+                 "Month", "Season","TimeOfDay",
+                 "isWeekend","Holiday","IncCategory")
+df_raw[factor_cols] <- lapply(df_raw[factor_cols], factor)
+
+df_agg1 <- aggregate(list(countIncidents=df_raw$IncidntNum),
+                          list(PoliceDistrict=df_raw$PoliceDistrict,
+                               # Year=df_raw$Year,
+                               Season = df_raw$Season,
+                               Month=df_raw$Month,
+                               # End_Start_Month = df_raw$End_Start_Month,
+                               # WeekOfYear=df_raw$WeekOfYear,
+                               # DayOfMonth=df_raw$DayOfMonth,
+                               isWeekend=df_raw$isWeekend,
+                               Holiday=df_raw$Holiday,
+                               TimeOfDay=df_raw$TimeOfDay,
+                               IncCategory=df_raw$IncCategory
+                               ),length)
+ 
+df_agg2 <- aggregate(list(Resolution_resp=df_raw$Resolution_resp),
+                         list(PoliceDistrict=df_raw$PoliceDistrict,
+                              Season = df_raw$Season,
+                              # Year=df_raw$Year,
+                              Month=df_raw$Month,
+                              # End_Start_Month = df_raw$End_Start_Month,
+                              # WeekOfYear=df_raw$WeekOfYear,
+                              # DayOfMonth=df_raw$DayOfMonth,
+                              isWeekend=df_raw$isWeekend,
+                              Holiday=df_raw$Holiday,
+                              TimeOfDay=df_raw$TimeOfDay,
+                              IncCategory=df_raw$IncCategory
+                              ),
+                         sum)
+
+merged_pd <- left_join(df_agg1, df_agg2, by = NULL, copy = FALSE)
+merged_pd$resolution_rate <- merged_pd$Resolution_resp/merged_pd$countIncidents
+
+# Checking resolution rates by Police Districts
+ggplot(merged_pd,aes(x=PoliceDistrict, y=resolution_rate, fill=PoliceDistrict))+
+  geom_boxplot() + #coord_flip() +
+  # scale_fill_brewer(palette="Greens") +
+  scale_fill_viridis(discrete = TRUE) +
+  labs(title="Clearance Rates for Police Districts",
+  x="Police Districts",y="Clearance Rates") + 
+  theme(legend.position="none") +
+  # dark_theme_gray() +
+  ggeasy::easy_center_title()
+
+# Checking resolution rates by category of incident
+ggplot(merged_pd,aes(x=IncCategory, y=resolution_rate, fill=IncCategory))+
+  geom_boxplot() + #coord_flip() +
+  # scale_fill_brewer(palette="Greens") +
+  scale_fill_viridis(discrete = TRUE) +
+  labs(title="Clearance Rates by Category of Incident",
+       x="Incident Category",y="Clearance Rates") + 
+  theme(legend.position="none") +
+  # dark_theme_gray() +
+  ggeasy::easy_center_title()
+```
+
+The boxplot on the left shows that Mission and Tenderloin have the some of the highest average clearance rates amongst the ten police districts, while Richmond sees the lowest average clearance rates. This plot forms the motivation for fitting a hierarchical model, using separate intercepts for each group, i.e. Police District, to account for the different baseline clearance rates amongst the districts. The boxplot on the right displays how the average clearance rates vary for each category of incident. As can be seen from the plot, violent crimes have high clearance rates, while property crimes, larceny thefts in particular, have extremely low clearance rates. 
+
+Additional exploratory analysis focused on other predictors are also carried out. Predictors like $Season$, $MonthOfYear$, $Holiday$ and $IncCategory$ do not significantly affect the clearance rates across the police districts. The graph below shows the clearance rates by time of day, across all police districts. It can be observed that the trend and magnitude of the rates vary across the districts. This suggests that random slopes could possibly be modeled for each group. Additional plots of the predictor variables against clearance rates can be found in the appendix.
+
+```{r edaplot2,echo=FALSE, message=FALSE, warning=FALSE, results='asis', out.width="70%", fig.show="hold", fig.cap = "Clearance rates by Time of Day, by Police Districts, EM : Early Morning, Eve : Evening, LN : Late Night, Morn: Morning, N : Night, Noon:Noon"}
+ggplot(merged_pd,aes(x=TimeOfDay, y=resolution_rate, fill=TimeOfDay)) +
+  geom_boxplot() + #coord_flip() +
+  # scale_fill_brewer(palette="Reds") +
+  scale_fill_viridis(discrete = TRUE) +
+  labs(title="Clearance rates in Police Districts by Time of Day",
+       x="Time of Day",y="Clearance Rates") +
+  theme_classic() +
+  # dark_theme_gray() +
+  theme(legend.position="none",
+        axis.text.x = element_text(size = 7)) +
+  scale_x_discrete(labels=c("Early Morning" = "EM", "Evening" = "Eve",
+                              "Late Night" = "LN","Morning" = "Morn",
+                              "Night" = "N", "Noon" = "Noon")) +
+  facet_wrap( ~ PoliceDistrict, ncol=5) +
+  ggeasy::easy_center_title()
+```
 
 ## Model
 
+Model selection was performed by accounting for different interactions and effects, which included both random and fixed effects. The baseline model that was fit for this analysis is a hierarchical logistic regression model, that models the clearance rates as the response variable, and $Police District$ as the random intercept. This is carried out to account for the random effects that the different police districts might contribute to the model.
+
+The hierarchical model is fit with all the main effects, i.e. $Season$, $Month$, $isWeekend$, $Holiday$,  $TimeOfDay$ and $IncCategory$. Both $Season$ and $Holiday$ were found to be insignificant predictors. To confirm this, ANOVA Chi-squared tests are performed, and the p-value was found to be significantly greater than 0.05, implying that these predictors do not add any additional information to the model. 
+
+In addition, random slopes for $TimeOfDay$ were also considered for the hierarchical model. Although the solution for this model does converge, the solution obtained has a singular fit, which is an indicator that the model might be too complex for the underlying data and hence, possibly over-fitting. The random intercept model is then retained as the final model. This model has an intercept standard deviation of 0.33, which is not very high. The model equation is as shown below:
+
+$$ y_i|x_i \hspace {1mm}{\sim} \hspace {1mm} Bernoulli (\pi_i);\hspace {1mm} i = 1,2,\ldots, 6475; \hspace {1mm} j = 1,2, \ldots, 10 $$
+$$
+log(\frac{\pi_i}{1 - \pi_i}) = (\beta_0 + \gamma^{policedistrict}_{0j|i|}) +  \beta_1 * x_{i1} + \beta_2*x_{i2} + \beta_3*x_{i3} + \beta_4*x_{i4};
+$$
+$$ \gamma_{0j} \hspace {1mm}{\sim} \hspace {1mm} N(0, \sigma^2_{policedistrict})  $$
+where, $x_{i1}$ is $Month$, $x_{i2}$ is $isWeekend$, $x_{i3}$ is $TimeOfDay$, $x_{i4}$ is $IncCategory$.
+
+The coefficients of the model are as shown in the table below:
+
+```{r model,message=FALSE, warning=FALSE, results='asis'}
+cat("\\begin{center}")
+model1_minus_hol_seas <- glmer(cbind(Resolution_resp, countIncidents-Resolution_resp) ~ Month + isWeekend +
+                            TimeOfDay + IncCategory + (1 | PoliceDistrict),                         
+                          family=binomial(link="logit"), data=merged_pd
+                          # ,control=glmerControl(
+                          #   optimizer="bobyqa",optCtrl=list(maxfun=2e5))
+)
+stargazer(model1_minus_hol_seas,header=FALSE,float=FALSE,single.row = TRUE, no.space = TRUE, column.sep.width = "3pt",font.size = "small", caption="Table 1: Coefficients of hierarchical logistic regression with random intercept")
+cat("\\end{center}")
+```
+
+From the results in Table 1, it can be observed that the intercept indicates that across all police districts, the odds of a crime getting cleared are 0.13, when all the categorical predictors are at their baseline values. The coefficients are exponentiated for easier interpretation of the effects. For a fixed police district, day of the week, time of day and category of incident, the odds of a crime getting cleared is 18% less likely for the month of June, compared against the baseline month of January. For a police district, month, time of day and category of incident, the odds of a crime getting cleared on the weekend is 5% lesser than a weekday. For a fixed police district, month, day of week, and category of incident, the odds of a crime getting cleared is 18% less if it occurs late night, compared to if it occurs early morning. For a given police district, month, day of week and time of day, the odds of a property crime getting cleared is 64% less likely than the odds of an arson charge getting cleared. These results are consistent with what was observed in the exploratory analysis.
+
+The dotplot below in figure 3 further highlights the variation in clearance rates across the police districts. As was observed from the exploratory analysis, Tenderloin and Mission have the greatest positive intercept, which are significantly different than zero.
+
+```{r dotplot, results='asis', message=FALSE, warning=FALSE, fig.show="hold", out.width = "70%", fig.cap = "Dotplot of random effects"}
+dotplot(ranef(model1_minus_hol_seas, condVar=TRUE))
+```
+
 ## Conclusion
 
-This is an R Markdown document. Markdown is a simple formatting syntax for authoring HTML, PDF, and MS Word documents. For more details on using R Markdown see <http://rmarkdown.rstudio.com>.
+Overall, the model was valid and addressed questions about the factors that affect the clearance rates of crimes across the ten police jurisdictions of San Francisco. It was observed that $Season$ and $Holiday$ did not have a significant effect on the crime clearance rates. Some effects which tend to impact crime clearances are the time of day in which an incident occurs, if the crime takes place on a weekend, and the type of crime that occurs. Specifically, average clearance rates observed were lower on the weekends than on weekdays, and for incidents occurring late nights compared to early mornings. The odds of clearance rates for property crimes are also very low compared to other categories of crimes. This ties in with Proposition 47 that was passed in California, which updated the lower limit for thefts to be considered for prosecution to $950, and hence, a large number of these cases are unreported or uncleared.
 
-When you click the **Knit** button a document will be generated that includes both content as well as the output of any embedded R code chunks within the document. You can embed an R code chunk like this:
+The dataset is subject to change, and hence, some records may be modified or removed to comply with court orders to to keep certain records private during internal investigations. This dataset also does not necessarily capture all data surrounding policing and crime, and hence, conclusions drawn out of this analysis might not be exactly accurate. 
 
-```{r cars}
-summary(cars)
+\newpage
+## Appendix
+
+### Data Dictionary
+
+A summary of all variables included in the dataset are as under:
+
+| **Variable **      | **Description**  |
+| :------------- | :----------- |
+| **Incident Datetime** | The date and time when the incident occurred |
+| **Incident Date**   | The date the incident occurred |
+| **Incident Time**   | The time the incident occurred |
+| **Incident Year**   | The year the incident occurred, provided as a convenience for filtering |
+| **Incident Day of Week**   | The day of week the incident occurred|
+| **Report Datetime**   |Distinct from Incident Datetime, Report Datetime is when the report was filed |
+| **Row ID**   | A unique identifier for each row of data in the dataset |
+| **Incident ID**   | This is the system generated identifier for incident reports. Incident IDs and Incident Numbers both uniquely identify reports, but Incident Numbers are used when referencing cases and report documents |
+| **Incident Number**   | The number issued on the report, sometimes interchangeably referred to as the Case Number. This number is used to reference cases and report documents |
+| **CAD Number**   | mother’s pre-pregnancy weight in pounds |
+| **inc**   | The Computer Aided Dispatch (CAD) is the system used by the Department of Emergency Management (DEM) to dispatch officers and other public safety personnel. CAD Numbers are assigned by the DEM system and linked to relevant incident reports (Incident Number). Not all Incidents will have a CAD Number. Those filed online via Coplogic (refer to “Filed Online” field) and others not filed through the DEM system will not have CAD Numbers |
+| **Report Type Code**   | A system code for report types, these have corresponding descriptions within the dataset |
+| **Report Type Description**   | The description of the report type, can be one of: Initial; Initial Supplement; Vehicle Initial; Vehicle Supplement; Copologic Initial; Copologic Supplement |
+| **Filed Online**   | Non- emergency police reports can be filed online by members of the public using SFPD’s self-service reporting system called Coplogic Values in this field will be “TRUE” if Coplogic was used to file the report. Please reference the link below for additional info: (http://sanfranciscopolice.org/reports) |
+| **Incident Code**   | Incident Codes are the system codes to describe a type of incident. A single incident report can have one or more incident types associated. In those cases you will see multiple rows representing a unique combination of the Incident ID and Incident Code |
+| **Incident Category**   | A category mapped on to the Incident Code used in statistics and reporting. Mappings provided by the Crime Analysis Unit of the Police Department |
+| **Incident Subcategory**   | A subcategory mapped to the Incident Code that is used for statistics and reporting. Mappings are provided by the Crime Analysis Unit of the Police Department |
+| **Incident Description**   | The description of the incident that corresponds with the Incident Code. These are generally self-explanatory |
+| **Resolution**   | The resolution of the incident at the time of the report. Can be one of: • Cite or Arrest Adult • Cite or Arrest Juvenile* • Exceptional Adult • Exceptional Juvenile* • Open or Active • Unfounded Note: once a report is filed, the Resolution will not change. Status changes and/or updates must be provided using a Supplemental Report *Incidents identifying juvenile information are not included in this dataset. Please see the Juvenile Data section for more information. *This is used to create the reponse variable.* |
+| **Intersection**   | The 2 or more street names that intersect closest to the original incident separated by a backward slash (\). Note, the possible intersections will only include those that satisfy the privacy controls |
+| **CNN**   | The unique identifier of the intersection for reference back to other related basemap datasets. For more on the Centerline Node Network see https://datasf.gitbook.io/draft-publishing-standards/standard-reference-data/basemap/street-centerlines-nodes |
+| **Police District**   | The Police District where the incident occurred. District boundaries can be reviewed in the link below. Please note this field is entered by officers and not based on the point. Reference here: https://data.sfgov.org/d/wkhw-cjsf |
+| **Analysis Neighborhood**   | This field is used to identify the neighborhood where each incident occurs. Neighborhoods and boundaries are defined by the Department of Public Health and the Mayor's Office of Housing and Community Development. Please reference the link below for additional info: https://data.sfgov.org/d/p5b7-5n3h Please note this boundary is assigned based on the intersection, it may differ from the boundary the incident actually occurred within |
+| **Supervisor District**   | There are 11 members elected to the Board of Supervisors in San Francisco, each representing a geographic district. The Board of Supervisors is the legislative body for San Francisco. The districts are numbered 1 through 11. Please reference the link below for additional info: https://data.sfgov.org/d/8nkz-x4ny Please note this boundary is assigned based on the intersection, it may differ from the boundary the incident actually occurred within |
+| **Latitude**   | The latitude coordinate in WGS84, spatial reference is EPSG:4326 |
+| **Longitude**   | The longitude coordinate in WGS84, spatial reference is EPSG:4326 |
+| **Point**   | Geolocation in OGC WKT format (e.g, POINT(37.4,-122.3) |
+
+### Exploratory Analysis
+```{r edaplot3,echo=FALSE, message=FALSE, warning=FALSE, results='asis', out.width="49%"}
+
+# Checking resolution rates by Police Districts
+ggplot(merged_pd,aes(x=PoliceDistrict, y=resolution_rate, fill=PoliceDistrict))+
+  geom_boxplot() + #coord_flip() +
+  # scale_fill_brewer(palette="Greens") +
+  scale_fill_viridis(discrete = TRUE) +
+  labs(title="Resolution Rates for Police Districts",
+  x="Police Districts",y="Resolution Rates") + 
+  theme(legend.position="none") +
+  # dark_theme_gray() +
+  ggeasy::easy_center_title()
+
+ggplot(merged_pd,aes(x=PoliceDistrict, y=countIncidents, fill=PoliceDistrict))+
+  geom_boxplot() + #coord_flip() +
+  # scale_fill_brewer(palette="Greens") +
+  scale_fill_viridis(discrete = TRUE) +
+  labs(title="Count of Incidents for Police Districts",
+       x="Police Districts",y="Count of Incidents") + 
+  theme(legend.position="none") +
+  # dark_theme_gray() +
+  ggeasy::easy_center_title()
+
+ggplot(merged_pd,aes(x=Season, y=resolution_rate, fill=Season))+
+  geom_boxplot() + #coord_flip() +
+  # scale_fill_brewer(palette="Greens") +
+  scale_fill_viridis(discrete = TRUE) +
+  labs(title="Resolution Rates by Season",
+       x="Season",y="Resolution Rates") + 
+  theme(legend.position="none") +
+  # dark_theme_gray() +
+  ggeasy::easy_center_title()
+
+ggplot(merged_pd,aes(x=Month, y=resolution_rate, fill=Month))+
+  geom_boxplot() + #coord_flip() +
+  # scale_fill_brewer(palette="Greens") +
+  scale_fill_viridis(discrete = TRUE) +
+  labs(title="Resolution Rates by Month",
+       x="Month",y="Resolution Rates") + 
+  theme(legend.position="none") +
+  # dark_theme_gray() +
+  ggeasy::easy_center_title()
+
+
+ggplot(merged_pd,aes(x=isWeekend, y=resolution_rate, fill=isWeekend))+
+  geom_boxplot() + #coord_flip() +
+  # scale_fill_brewer(palette="Greens") +
+  scale_fill_viridis(discrete = TRUE) +
+  labs(title="Resolution Rates by Weekend",
+       x="Weekend",y="Resolution Rates") + 
+  theme(legend.position="none") +
+  # dark_theme_gray() +
+  ggeasy::easy_center_title()
+
+ggplot(merged_pd,aes(x=Holiday, y=resolution_rate, fill=Holiday))+
+  geom_boxplot() + #coord_flip() +
+  # scale_fill_brewer(palette="Greens") +
+  scale_fill_viridis(discrete = TRUE) +
+  labs(title="Resolution Rates by Holiday",
+       x="Holiday",y="Resolution Rates") + 
+  theme(legend.position="none") +
+  # dark_theme_gray() +
+  ggeasy::easy_center_title()
+
+ggplot(merged_pd,aes(x=TimeOfDay, y=resolution_rate, fill=TimeOfDay))+
+  geom_boxplot() + #coord_flip() +
+  # scale_fill_brewer(palette="Greens") +
+  scale_fill_viridis(discrete = TRUE) +
+  labs(title="Resolution Rates by Time of Day",
+       x="TIme of Day",y="Resolution Rates") + 
+  theme(legend.position="none") +
+  # dark_theme_gray() +
+  ggeasy::easy_center_title()
+
+ggplot(merged_pd,aes(x=IncCategory, y=resolution_rate, fill=IncCategory))+
+  geom_boxplot() + #coord_flip() +
+  # scale_fill_brewer(palette="Greens") +
+  scale_fill_viridis(discrete = TRUE) +
+  labs(title="Resolution Rates by Category of Incident",
+       x="Incident Category",y="Resolution Rates") + 
+  theme(legend.position="none") +
+  # dark_theme_gray() +
+  ggeasy::easy_center_title()
+
+# Interactions
+ggplot(merged_pd,aes(x=Season, y=resolution_rate, fill=Season)) +
+  geom_boxplot() + #coord_flip() +
+  # scale_fill_brewer(palette="Reds") +
+  scale_fill_viridis(discrete = TRUE) +
+  labs(title="Clearance rates in Police Districts by Season",
+       x="Season",y="Resolution Rates") + 
+  theme_classic() + theme(legend.position="none") +
+  #scale_x_discrete(labels=c("0" = "No","1" = "Yes")) +
+  facet_wrap( ~ PoliceDistrict, ncol=3) +
+  ggeasy::easy_center_title()
+
+ggplot(merged_pd,aes(x=Month, y=resolution_rate, fill=Month)) +
+  geom_boxplot() + #coord_flip() +
+  # scale_fill_brewer(palette="Reds") +
+  scale_fill_viridis(discrete = TRUE) +
+  labs(title="Clearance rates in Police Districts by Month",
+       x="Month",y="Resolution Rates") + 
+  theme_classic() + theme(legend.position="none") +
+  #scale_x_discrete(labels=c("0" = "No","1" = "Yes")) +
+  facet_wrap( ~ PoliceDistrict, ncol=3) +
+  ggeasy::easy_center_title()
+
+ggplot(merged_pd,aes(x=isWeekend, y=resolution_rate, fill=isWeekend)) +
+  geom_boxplot() + #coord_flip() +
+  # scale_fill_brewer(palette="Reds") +
+  scale_fill_viridis(discrete = TRUE) +
+  labs(title="Resolution rates in Police Districts by Weekend",
+       x="Weekend",y="Resolution Rates") + 
+  theme_classic() + theme(legend.position="none") +
+  #scale_x_discrete(labels=c("0" = "No","1" = "Yes")) +
+  facet_wrap( ~ PoliceDistrict, ncol=3) +
+  ggeasy::easy_center_title()
+
+ggplot(merged_pd,aes(x=Holiday, y=resolution_rate, fill=Holiday)) +
+  geom_boxplot() + #coord_flip() +
+  # scale_fill_brewer(palette="Reds") +
+  scale_fill_viridis(discrete = TRUE) +
+  labs(title="Resolution rates in Police Districts by Holiday",
+       x="Holiday",y="Resolution Rates") + 
+  theme_classic() + theme(legend.position="none") +
+  #scale_x_discrete(labels=c("0" = "No","1" = "Yes")) +
+  facet_wrap( ~ PoliceDistrict, ncol=3) +
+  ggeasy::easy_center_title()
+
+ggplot(merged_pd,aes(x=IncCategory, y=resolution_rate, fill=IncCategory)) +
+  geom_boxplot() + #coord_flip() +
+  # scale_fill_brewer(palette="Reds") +
+  scale_fill_viridis(discrete = TRUE) +
+  labs(title="Resolution rates in Police Districts by Incident Category",
+       x="Incident Category",y="Resolution Rates") + 
+  theme_classic() + 
+  theme(legend.position="none",
+        axis.text.x = element_text(size = 7)) +
+  scale_x_discrete(labels=c("Arson" = "Arson", "Other" = "Other",
+                              "Property Crime" = "Property","Violent Crime" = "Violent")) +
+  #scale_x_discrete(labels=c("0" = "No","1" = "Yes")) +
+  facet_wrap( ~ PoliceDistrict, ncol=3) +
+  ggeasy::easy_center_title()
 ```
 
-## Including Plots
+### Code
 
-You can also embed plots, for example:
-
-```{r pressure, echo=FALSE}
-plot(pressure)
-```
-
-Note that the `echo = FALSE` parameter was added to the code chunk to prevent printing of the R code that generated the plot.
+The code can be found in the Github repository [here](https://github.com/unsupervisedlearner1123/IDS702_FinalProject_CrimesinSF).
