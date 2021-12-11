@@ -296,15 +296,16 @@ anova(model1_minus_hol_seas,model2,test="Chisq")
 summary(model2)
 tab_model(model2)
 dotplot(ranef(model2, condVar=TRUE))
+# singular fit, not considered
 
 # Model 3 - Trying Poisson with random intercept
-model3 <- glmer(cbind(Resolution_resp, countIncidents-Resolution_resp) ~ Month + isWeekend +
-                  TimeOfDay + IncCategory + (1 | PoliceDistrict),
-                family=poisson(link="log"), data=merged_pd,
-                control=glmerControl(optimizer="bobyqa", 
-                optCtrl = list(maxfun = 100000))
-)
-summary(model3)
-tab_model(model3)
-dotplot(ranef(model3, condVar=TRUE))
+# model3 <- glmer(cbind(Resolution_resp, countIncidents-Resolution_resp) ~ Month + isWeekend +
+#                   TimeOfDay + IncCategory + (1 | PoliceDistrict),
+#                 family=poisson(link="log"), data=merged_pd,
+#                 control=glmerControl(optimizer="bobyqa", 
+#                 optCtrl = list(maxfun = 100000))
+# )
+# summary(model3)
+# tab_model(model3)
+# dotplot(ranef(model3, condVar=TRUE))
 
