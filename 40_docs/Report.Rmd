@@ -8,6 +8,12 @@ output:
     fig_caption: yes
 ---
 
+<style>
+p.caption {
+  font-size: 0.6em;
+}
+</style>
+
 ```{r setup, include=FALSE}
 knitr::opts_chunk$set(echo = FALSE, out.width="49%",out.height="49%",fig.show='hold',fig.align = "center")
 ```
@@ -187,7 +193,7 @@ dotplot(ranef(model1_minus_hol_seas, condVar=TRUE))
 
 Overall, the model was valid and addressed questions about the factors that affect the clearance rates of crimes across the ten police jurisdictions of San Francisco. It was observed that $Season$ and $Holiday$ did not have a significant effect on the crime clearance rates. Some effects which tend to impact crime clearances are the time of day in which an incident occurs, if the crime takes place on a weekend, and the type of crime that occurs. Specifically, average clearance rates observed were lower on the weekends than on weekdays, and for incidents occurring late nights compared to early mornings. The odds of clearance rates for property crimes are also very low compared to other categories of crimes. This ties in with Proposition 47 that was passed in California, which updated the lower limit for thefts to be considered for prosecution to $950, and hence, a large number of these cases are unreported or uncleared.
 
-The dataset is subject to change, and hence, some records may be modified or removed to comply with court orders to to keep certain records private during internal investigations. This dataset also does not necessarily capture all data surrounding policing and crime, and hence, conclusions drawn out of this analysis might not be exactly accurate. 
+The dataset is subject to change, and hence, some records may be modified or removed to comply with court orders to to keep certain records private during internal investigations. This dataset also does not necessarily capture all data surrounding policing and crime, and hence, conclusions drawn out of this analysis might not be exactly accurate. Since the data is grouped at a combination of different factors, which makes it very granular, we observe that not all groupings have enough observations recorded against them to fit a model on. Certain categories could be aggregated out so that there are sufficient observations against each grouping. 
 
 \newpage
 ## Appendix
@@ -216,7 +222,7 @@ A summary of all variables included in the dataset are as under:
 | **Incident Category**   | A category mapped on to the Incident Code used in statistics and reporting. Mappings provided by the Crime Analysis Unit of the Police Department |
 | **Incident Subcategory**   | A subcategory mapped to the Incident Code that is used for statistics and reporting. Mappings are provided by the Crime Analysis Unit of the Police Department |
 | **Incident Description**   | The description of the incident that corresponds with the Incident Code. These are generally self-explanatory |
-| **Resolution**   | The resolution of the incident at the time of the report. Can be one of: • Cite or Arrest Adult • Cite or Arrest Juvenile* • Exceptional Adult • Exceptional Juvenile* • Open or Active • Unfounded Note: once a report is filed, the Resolution will not change. Status changes and/or updates must be provided using a Supplemental Report *Incidents identifying juvenile information are not included in this dataset. Please see the Juvenile Data section for more information. *This is used to create the reponse variable.* |
+| **Resolution**   | The resolution of the incident at the time of the report. Can be one of: • Cite or Arrest Adult • Cite or Arrest Juvenile* • Exceptional Adult • Exceptional Juvenile* • Open or Active • Unfounded Note: once a report is filed, the Resolution will not change. Status changes and/or updates must be provided using a Supplemental Report * Incidents identifying juvenile information are not included in this dataset. Please see the Juvenile Data section for more information. *This is used to create the response variable.* |
 | **Intersection**   | The 2 or more street names that intersect closest to the original incident separated by a backward slash (\). Note, the possible intersections will only include those that satisfy the privacy controls |
 | **CNN**   | The unique identifier of the intersection for reference back to other related basemap datasets. For more on the Centerline Node Network see https://datasf.gitbook.io/draft-publishing-standards/standard-reference-data/basemap/street-centerlines-nodes |
 | **Police District**   | The Police District where the incident occurred. District boundaries can be reviewed in the link below. Please note this field is entered by officers and not based on the point. Reference here: https://data.sfgov.org/d/wkhw-cjsf |
@@ -227,6 +233,8 @@ A summary of all variables included in the dataset are as under:
 | **Point**   | Geolocation in OGC WKT format (e.g, POINT(37.4,-122.3) |
 
 ### Exploratory Analysis
+#### Distribution of response variable against predictors
+
 ```{r edaplot3,echo=FALSE, message=FALSE, warning=FALSE, results='asis', out.width="49%"}
 
 # Checking resolution rates by Police Districts
@@ -240,6 +248,7 @@ ggplot(merged_pd,aes(x=PoliceDistrict, y=resolution_rate, fill=PoliceDistrict))+
   # dark_theme_gray() +
   ggeasy::easy_center_title()
 
+# Checking count of incidents by Police Districts
 ggplot(merged_pd,aes(x=PoliceDistrict, y=countIncidents, fill=PoliceDistrict))+
   geom_boxplot() + #coord_flip() +
   # scale_fill_brewer(palette="Greens") +
@@ -250,6 +259,7 @@ ggplot(merged_pd,aes(x=PoliceDistrict, y=countIncidents, fill=PoliceDistrict))+
   # dark_theme_gray() +
   ggeasy::easy_center_title()
 
+# Checking resolution rates by season
 ggplot(merged_pd,aes(x=Season, y=resolution_rate, fill=Season))+
   geom_boxplot() + #coord_flip() +
   # scale_fill_brewer(palette="Greens") +
@@ -260,6 +270,7 @@ ggplot(merged_pd,aes(x=Season, y=resolution_rate, fill=Season))+
   # dark_theme_gray() +
   ggeasy::easy_center_title()
 
+# Checking resolution rates by Month
 ggplot(merged_pd,aes(x=Month, y=resolution_rate, fill=Month))+
   geom_boxplot() + #coord_flip() +
   # scale_fill_brewer(palette="Greens") +
@@ -270,7 +281,7 @@ ggplot(merged_pd,aes(x=Month, y=resolution_rate, fill=Month))+
   # dark_theme_gray() +
   ggeasy::easy_center_title()
 
-
+# Checking resolution rates by day of week
 ggplot(merged_pd,aes(x=isWeekend, y=resolution_rate, fill=isWeekend))+
   geom_boxplot() + #coord_flip() +
   # scale_fill_brewer(palette="Greens") +
@@ -281,6 +292,7 @@ ggplot(merged_pd,aes(x=isWeekend, y=resolution_rate, fill=isWeekend))+
   # dark_theme_gray() +
   ggeasy::easy_center_title()
 
+# Checking resolution rates by Holiday
 ggplot(merged_pd,aes(x=Holiday, y=resolution_rate, fill=Holiday))+
   geom_boxplot() + #coord_flip() +
   # scale_fill_brewer(palette="Greens") +
@@ -291,6 +303,7 @@ ggplot(merged_pd,aes(x=Holiday, y=resolution_rate, fill=Holiday))+
   # dark_theme_gray() +
   ggeasy::easy_center_title()
 
+# Checking resolution rates by time of day
 ggplot(merged_pd,aes(x=TimeOfDay, y=resolution_rate, fill=TimeOfDay))+
   geom_boxplot() + #coord_flip() +
   # scale_fill_brewer(palette="Greens") +
@@ -301,6 +314,7 @@ ggplot(merged_pd,aes(x=TimeOfDay, y=resolution_rate, fill=TimeOfDay))+
   # dark_theme_gray() +
   ggeasy::easy_center_title()
 
+# Checking resolution rates by category of incident
 ggplot(merged_pd,aes(x=IncCategory, y=resolution_rate, fill=IncCategory))+
   geom_boxplot() + #coord_flip() +
   # scale_fill_brewer(palette="Greens") +
@@ -310,8 +324,12 @@ ggplot(merged_pd,aes(x=IncCategory, y=resolution_rate, fill=IncCategory))+
   theme(legend.position="none") +
   # dark_theme_gray() +
   ggeasy::easy_center_title()
+```
 
-# Interactions
+\newpage
+#### Distribution of response variable against predictors by Police Districts
+```{r edaplot4,echo=FALSE, message=FALSE, warning=FALSE, results='asis', out.width="49%"}
+# Checking clearance rates against Season by Police Districts
 ggplot(merged_pd,aes(x=Season, y=resolution_rate, fill=Season)) +
   geom_boxplot() + #coord_flip() +
   # scale_fill_brewer(palette="Reds") +
@@ -323,6 +341,7 @@ ggplot(merged_pd,aes(x=Season, y=resolution_rate, fill=Season)) +
   facet_wrap( ~ PoliceDistrict, ncol=3) +
   ggeasy::easy_center_title()
 
+# Checking clearance rates against Month by Police Districts
 ggplot(merged_pd,aes(x=Month, y=resolution_rate, fill=Month)) +
   geom_boxplot() + #coord_flip() +
   # scale_fill_brewer(palette="Reds") +
@@ -334,6 +353,7 @@ ggplot(merged_pd,aes(x=Month, y=resolution_rate, fill=Month)) +
   facet_wrap( ~ PoliceDistrict, ncol=3) +
   ggeasy::easy_center_title()
 
+# Checking clearance rates against day of week by Police Districts
 ggplot(merged_pd,aes(x=isWeekend, y=resolution_rate, fill=isWeekend)) +
   geom_boxplot() + #coord_flip() +
   # scale_fill_brewer(palette="Reds") +
@@ -345,6 +365,7 @@ ggplot(merged_pd,aes(x=isWeekend, y=resolution_rate, fill=isWeekend)) +
   facet_wrap( ~ PoliceDistrict, ncol=3) +
   ggeasy::easy_center_title()
 
+# Checking clearance rates against Holiday by Police Districts
 ggplot(merged_pd,aes(x=Holiday, y=resolution_rate, fill=Holiday)) +
   geom_boxplot() + #coord_flip() +
   # scale_fill_brewer(palette="Reds") +
@@ -356,6 +377,7 @@ ggplot(merged_pd,aes(x=Holiday, y=resolution_rate, fill=Holiday)) +
   facet_wrap( ~ PoliceDistrict, ncol=3) +
   ggeasy::easy_center_title()
 
+# Checking clearance rates against category of incident by Police Districts
 ggplot(merged_pd,aes(x=IncCategory, y=resolution_rate, fill=IncCategory)) +
   geom_boxplot() + #coord_flip() +
   # scale_fill_brewer(palette="Reds") +
@@ -369,6 +391,23 @@ ggplot(merged_pd,aes(x=IncCategory, y=resolution_rate, fill=IncCategory)) +
                               "Property Crime" = "Property","Violent Crime" = "Violent")) +
   #scale_x_discrete(labels=c("0" = "No","1" = "Yes")) +
   facet_wrap( ~ PoliceDistrict, ncol=3) +
+  ggeasy::easy_center_title()
+
+# Checking clearance rates against time of day by Police Districts
+ggplot(merged_pd,aes(x=TimeOfDay, y=resolution_rate, fill=TimeOfDay)) +
+  geom_boxplot() + #coord_flip() +
+  # scale_fill_brewer(palette="Reds") +
+  scale_fill_viridis(discrete = TRUE) +
+  labs(title="Clearance rates in Police Districts by Time of Day",
+       x="Time of Day",y="Clearance Rates") +
+  theme_classic() +
+  # dark_theme_gray() +
+  theme(legend.position="none",
+        axis.text.x = element_text(size = 7)) +
+  scale_x_discrete(labels=c("Early Morning" = "EM", "Evening" = "Eve",
+                              "Late Night" = "LN","Morning" = "Morn",
+                              "Night" = "N", "Noon" = "Noon")) +
+  facet_wrap( ~ PoliceDistrict, ncol=5) +
   ggeasy::easy_center_title()
 ```
 
