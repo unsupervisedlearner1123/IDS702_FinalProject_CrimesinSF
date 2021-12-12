@@ -351,6 +351,18 @@ anova(model1_minus_hol_seas,model2,test="Chisq")
 summary(model2)
 tab_model(model2)
 dotplot(ranef(model2, condVar=TRUE))
+
+# Including interaction between category of incident and time of day
+model1_minus_hol_seas2 <- glmer(cbind(Resolution_resp, countIncidents-Resolution_resp) ~ Month + isWeekend +
+                                  TimeOfDay + IncCategory + IncCategory:TimeOfDay + (1 | PoliceDistrict),                         
+                                family=binomial(link="logit"), data=merged_pd
+                                # ,control=glmerControl(
+                                #   optimizer="bobyqa",optCtrl=list(maxfun=2e5))
+)
+summary(model1_minus_hol_seas2)
+anova(model1_minus_hol_seas,model1_minus_hol_seas2,test="Chisq")
+# interaction term insignificant
+
 # singular fit, not considered
 
 # Model 3 - Trying Poisson with random intercept
@@ -363,4 +375,6 @@ dotplot(ranef(model2, condVar=TRUE))
 # summary(model3)
 # tab_model(model3)
 # dotplot(ranef(model3, condVar=TRUE))
+
+
 
