@@ -227,6 +227,61 @@ ggplot(merged_pd,aes(x=IncCategory, y=resolution_rate, fill=IncCategory)) +
   facet_wrap( ~ PoliceDistrict, ncol=3) +
   ggeasy::easy_center_title()
 
+ggplot(merged_pd,aes(x=Holiday, y=resolution_rate, fill=Holiday)) +
+  geom_boxplot() + #coord_flip() +
+  # scale_fill_brewer(palette="Reds") +
+  scale_fill_viridis(discrete = TRUE) +
+  labs(title="Resolution rates vs Holiday by Incident Category",
+       x="Holiday",y="Resolution Rates") + 
+  theme_classic() + theme(legend.position="none") +
+  #scale_x_discrete(labels=c("0" = "No","1" = "Yes")) +
+  facet_wrap( ~ IncCategory, ncol=3) +
+  ggeasy::easy_center_title()
+
+ggplot(merged_pd,aes(x=isWeekend, y=resolution_rate, fill=isWeekend)) +
+  geom_boxplot() + #coord_flip() +
+  # scale_fill_brewer(palette="Reds") +
+  scale_fill_viridis(discrete = TRUE) +
+  labs(title="Resolution rates vs weekend by Incident Category",
+       x="Weekend",y="Resolution Rates") + 
+  theme_classic() + theme(legend.position="none") +
+  #scale_x_discrete(labels=c("0" = "No","1" = "Yes")) +
+  facet_wrap( ~ IncCategory, ncol=3) +
+  ggeasy::easy_center_title()
+
+# check
+ggplot(merged_pd,aes(x=TimeOfDay, y=resolution_rate, fill=TimeOfDay)) +
+  geom_boxplot() + #coord_flip() +
+  # scale_fill_brewer(palette="Reds") +
+  scale_fill_viridis(discrete = TRUE) +
+  labs(title="Resolution rates vs Time of day by Incident Category",
+       x="Time of Day",y="Resolution Rates") + 
+  theme_classic() + theme(legend.position="none") +
+  #scale_x_discrete(labels=c("0" = "No","1" = "Yes")) +
+  facet_wrap( ~ IncCategory, ncol=3) +
+  ggeasy::easy_center_title()
+
+ggplot(merged_pd,aes(x=Season, y=resolution_rate, fill=Season)) +
+  geom_boxplot() + #coord_flip() +
+  # scale_fill_brewer(palette="Reds") +
+  scale_fill_viridis(discrete = TRUE) +
+  labs(title="Resolution rates vs Time of day by Incident Category",
+       x="Season",y="Resolution Rates") + 
+  theme_classic() + theme(legend.position="none") +
+  #scale_x_discrete(labels=c("0" = "No","1" = "Yes")) +
+  facet_wrap( ~ IncCategory, ncol=3) +
+  ggeasy::easy_center_title()
+
+ggplot(merged_pd,aes(x=Month, y=resolution_rate, fill=Month)) +
+  geom_boxplot() + #coord_flip() +
+  # scale_fill_brewer(palette="Reds") +
+  scale_fill_viridis(discrete = TRUE) +
+  labs(title="Resolution rates vs Time of day by Incident Category",
+       x="Month",y="Resolution Rates") + 
+  theme_classic() + theme(legend.position="none") +
+  #scale_x_discrete(labels=c("0" = "No","1" = "Yes")) +
+  facet_wrap( ~ IncCategory, ncol=3) +
+  ggeasy::easy_center_title()
 
 # MODEL 1 - Fixed intercept only
 start_time <- Sys.time()
