@@ -132,7 +132,7 @@ ggplot(merged_pd,aes(x=IncCategory, y=resolution_rate, fill=IncCategory))+
 
 The boxplot on the left shows that Mission and Tenderloin have the some of the highest average clearance rates amongst the ten police districts, while Richmond sees the lowest average clearance rates. This plot forms the motivation for fitting a hierarchical model, using separate intercepts for each group, i.e. Police District, to account for the different baseline clearance rates amongst the districts. The boxplot on the right displays how the average clearance rates vary for each category of incident. As can be seen from the plot, violent crimes have high clearance rates, while property crimes, larceny thefts in particular, have extremely low clearance rates. 
 
-Additional exploratory analysis focused on other predictors are also carried out. Predictors like $Season$, $MonthOfYear$, $Holiday$ and $IncCategory$ do not significantly affect the clearance rates across the police districts. The graph below shows the clearance rates by time of day, across all police districts. It can be observed that the trend and magnitude of the rates vary across the districts. This suggests that random slopes could possibly be modeled for each group. Additional plots of the predictor variables against clearance rates can be found in the appendix.
+Additional exploratory analysis focused on other predictors are also carried out. Interaction effects among the predictors are also explored, but there does not seem to be any significant trends to model on. Predictors like $Season$, $MonthOfYear$, $Holiday$ and $IncCategory$ do not significantly affect the clearance rates across the police districts. The graph below shows the clearance rates by time of day, across all police districts. It can be observed that the trend and magnitude of the rates vary across the districts. This suggests that random slopes could possibly be modeled for each group. Additional plots of the predictor variables and their interactions against clearance rates can be found in the appendix.
 
 ```{r edaplot2,echo=FALSE, message=FALSE, warning=FALSE, results='asis', out.width="70%", fig.show="hold", fig.cap = "Clearance rates by Time of Day, by Police Districts, EM : Early Morning, Eve : Evening, LN : Late Night, Morn: Morning, N : Night, Noon:Noon"}
 ggplot(merged_pd,aes(x=TimeOfDay, y=resolution_rate, fill=TimeOfDay)) +
@@ -213,8 +213,7 @@ A summary of all variables included in the dataset are as under:
 | **Row ID**   | A unique identifier for each row of data in the dataset |
 | **Incident ID**   | This is the system generated identifier for incident reports. Incident IDs and Incident Numbers both uniquely identify reports, but Incident Numbers are used when referencing cases and report documents |
 | **Incident Number**   | The number issued on the report, sometimes interchangeably referred to as the Case Number. This number is used to reference cases and report documents |
-| **CAD Number**   | mother’s pre-pregnancy weight in pounds |
-| **inc**   | The Computer Aided Dispatch (CAD) is the system used by the Department of Emergency Management (DEM) to dispatch officers and other public safety personnel. CAD Numbers are assigned by the DEM system and linked to relevant incident reports (Incident Number). Not all Incidents will have a CAD Number. Those filed online via Coplogic (refer to “Filed Online” field) and others not filed through the DEM system will not have CAD Numbers |
+| **CAD Number**   | The Computer Aided Dispatch (CAD) is the system used by the Department of Emergency Management (DEM) to dispatch officers and other public safety personnel. CAD Numbers are assigned by the DEM system and linked to relevant incident reports (Incident Number). Not all Incidents will have a CAD Number. Those filed online via Coplogic (refer to “Filed Online” field) and others not filed through the DEM system will not have CAD Numbers |
 | **Report Type Code**   | A system code for report types, these have corresponding descriptions within the dataset |
 | **Report Type Description**   | The description of the report type, can be one of: Initial; Initial Supplement; Vehicle Initial; Vehicle Supplement; Copologic Initial; Copologic Supplement |
 | **Filed Online**   | Non- emergency police reports can be filed online by members of the public using SFPD’s self-service reporting system called Coplogic Values in this field will be “TRUE” if Coplogic was used to file the report. Please reference the link below for additional info: (http://sanfranciscopolice.org/reports) |
@@ -408,6 +407,62 @@ ggplot(merged_pd,aes(x=TimeOfDay, y=resolution_rate, fill=TimeOfDay)) +
                               "Late Night" = "LN","Morning" = "Morn",
                               "Night" = "N", "Noon" = "Noon")) +
   facet_wrap( ~ PoliceDistrict, ncol=5) +
+  ggeasy::easy_center_title()
+
+ggplot(merged_pd,aes(x=Holiday, y=resolution_rate, fill=Holiday)) +
+  geom_boxplot() + #coord_flip() +
+  # scale_fill_brewer(palette="Reds") +
+  scale_fill_viridis(discrete = TRUE) +
+  labs(title="Resolution rates vs Holiday by Incident Category",
+       x="Holiday",y="Resolution Rates") + 
+  theme_classic() + theme(legend.position="none") +
+  #scale_x_discrete(labels=c("0" = "No","1" = "Yes")) +
+  facet_wrap( ~ IncCategory, ncol=3) +
+  ggeasy::easy_center_title()
+
+ggplot(merged_pd,aes(x=isWeekend, y=resolution_rate, fill=isWeekend)) +
+  geom_boxplot() + #coord_flip() +
+  # scale_fill_brewer(palette="Reds") +
+  scale_fill_viridis(discrete = TRUE) +
+  labs(title="Resolution rates vs weekend by Incident Category",
+       x="Weekend",y="Resolution Rates") + 
+  theme_classic() + theme(legend.position="none") +
+  #scale_x_discrete(labels=c("0" = "No","1" = "Yes")) +
+  facet_wrap( ~ IncCategory, ncol=3) +
+  ggeasy::easy_center_title()
+
+# check
+ggplot(merged_pd,aes(x=TimeOfDay, y=resolution_rate, fill=TimeOfDay)) +
+  geom_boxplot() + #coord_flip() +
+  # scale_fill_brewer(palette="Reds") +
+  scale_fill_viridis(discrete = TRUE) +
+  labs(title="Resolution rates vs Time of day by Incident Category",
+       x="Time of Day",y="Resolution Rates") + 
+  theme_classic() + theme(legend.position="none") +
+  #scale_x_discrete(labels=c("0" = "No","1" = "Yes")) +
+  facet_wrap( ~ IncCategory, ncol=3) +
+  ggeasy::easy_center_title()
+
+ggplot(merged_pd,aes(x=Season, y=resolution_rate, fill=Season)) +
+  geom_boxplot() + #coord_flip() +
+  # scale_fill_brewer(palette="Reds") +
+  scale_fill_viridis(discrete = TRUE) +
+  labs(title="Resolution rates vs Season by Incident Category",
+       x="Season",y="Resolution Rates") + 
+  theme_classic() + theme(legend.position="none") +
+  #scale_x_discrete(labels=c("0" = "No","1" = "Yes")) +
+  facet_wrap( ~ IncCategory, ncol=3) +
+  ggeasy::easy_center_title()
+
+ggplot(merged_pd,aes(x=Month, y=resolution_rate, fill=Month)) +
+  geom_boxplot() + #coord_flip() +
+  # scale_fill_brewer(palette="Reds") +
+  scale_fill_viridis(discrete = TRUE) +
+  labs(title="Resolution rates vs Month by Incident Category",
+       x="Month",y="Resolution Rates") + 
+  theme_classic() + theme(legend.position="none") +
+  #scale_x_discrete(labels=c("0" = "No","1" = "Yes")) +
+  facet_wrap( ~ IncCategory, ncol=3) +
   ggeasy::easy_center_title()
 ```
 
